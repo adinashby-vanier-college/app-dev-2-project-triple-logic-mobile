@@ -36,14 +36,44 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Logo with border radius and shadow
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.3),
+                    spreadRadius: 2,
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(20),
+              child: const Icon(
+                Icons.wifi_tethering,
+                size: 60.0,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 24),
             const Text(
-              'Welcome to the App!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              'Welcome to 24BIT',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
             ),
             const SizedBox(height: 16),
             const Text(
-              'This is a simplified version without CRUD operations.',
+              'Your gateway to live events and experiences',
               textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black54,
+              ),
             ),
           ],
         ),
@@ -55,12 +85,12 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+            icon: Icon(Icons.event),
+            label: 'Events',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
         currentIndex: _selectedIndex,

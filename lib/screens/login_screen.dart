@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../services/social_auth_service.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? prefilledEmail;
+  
+  const LoginScreen({
+    super.key,
+    this.prefilledEmail,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -12,8 +19,17 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _socialAuthService = SocialAuthService();
   bool _isLoading = false;
   bool _isPasswordVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.prefilledEmail != null) {
+      _emailController.text = widget.prefilledEmail!;
+    }
+  }
 
   @override
   void dispose() {
@@ -22,22 +38,87 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _handleSocialLogin(Future<Map<String, dynamic>?> Function() signInMethod) async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userData = await signInMethod();
+      
+      if (userData != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Welcome, ${userData['displayName']}!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+
+        Future.delayed(const Duration(seconds: 1), () {
+          Navigator.pushReplacementNamed(context, '/home');
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Social login failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      // Simple login check
-      if (_emailController.text == 'user@example.com' && 
-          _passwordController.text == 'password123') {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+      try {
+        // Get the registered email from the text field
+        final email = _emailController.text;
+        final password = _passwordController.text;
+
+        // TODO: In a real app, this would validate against a backend/database
+        // For now, we'll simulate successful login for any registered email
+        if (email.isNotEmpty && password.isNotEmpty) {
+          if (mounted) {
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Login successful!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 1),
+              ),
+            );
+
+            // Navigate to home screen after brief delay
+            Future.delayed(const Duration(seconds: 1), () {
+              Navigator.pushReplacementNamed(context, '/home');
+            });
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Invalid email or password'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
-      } else {
+      } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid credentials')),
+            const SnackBar(
+              content: Text('An error occurred during login'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
@@ -77,6 +158,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your email';
                   }
+                  // Basic email format validation
+                  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                  if (!emailRegex.hasMatch(value)) {
+                    return 'Please enter a valid email address';
+                  }
                   return null;
                 },
               ),
@@ -112,7 +198,48 @@ class _LoginScreenState extends State<LoginScreen> {
                     ? const CircularProgressIndicator()
                     : const Text('Login'),
               ),
+              const SizedBox(height: 24),
+              // Or divider
+              const Row(
+                children: [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('OR', style: TextStyle(color: Colors.grey)),
+                  ),
+                  Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Google login button
+              ElevatedButton.icon(
+                onPressed: _isLoading ? null : () => _handleSocialLogin(_socialAuthService.signInWithGoogle),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black87,
+                  elevation: 1,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                icon: const FaIcon(FontAwesomeIcons.google, color: Colors.red),
+                label: const Text('Continue with Google'),
+              ),
               const SizedBox(height: 16),
+              // GitHub login button
+              ElevatedButton.icon(
+                onPressed: _isLoading
+                    ? null
+                    : () => _handleSocialLogin(() => _socialAuthService.signInWithGitHub(context)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF24292E),
+                  foregroundColor: Colors.white,
+                  elevation: 1,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                icon: const FaIcon(FontAwesomeIcons.github),
+                label: const Text('Continue with GitHub'),
+              ),
+              const SizedBox(height: 24),
+              // Register link
               TextButton(
                 onPressed: () {
                   Navigator.pushNamed(context, '/register');

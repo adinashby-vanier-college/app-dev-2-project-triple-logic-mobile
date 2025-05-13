@@ -36,7 +36,23 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       // Simple registration check
       if (_passwordController.text == _confirmPasswordController.text) {
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registration successful! Please login to continue.'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          
+          // Wait for snackbar to be visible before navigation
+          Future.delayed(const Duration(seconds: 2), () {
+            Navigator.pushReplacementNamed(
+              context,
+              '/login',
+              arguments: {'email': _emailController.text},
+            );
+          });
         }
       } else {
         if (mounted) {
@@ -94,6 +110,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your email';
+                  }
+                  // Basic email format validation
+                  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                  if (!emailRegex.hasMatch(value)) {
+                    return 'Please enter a valid email address';
                   }
                   return null;
                 },

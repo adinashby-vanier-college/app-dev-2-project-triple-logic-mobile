@@ -28,7 +28,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController.text = widget.user.name;
+    _nameController.text = widget.user.name ?? widget.user.displayName ?? '';
     _emailController.text = widget.user.email;
   }
 
@@ -66,7 +66,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
 
     try {
-      // TODO: Implement profile update logic
+      // TODO: Implement profile update logic with UserRepository
+      final updates = {
+        'name': _nameController.text,
+        'display_name': _nameController.text, // Update both name and display_name
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      
       await Future.delayed(const Duration(seconds: 2)); // Simulated API call
       
       if (mounted) {

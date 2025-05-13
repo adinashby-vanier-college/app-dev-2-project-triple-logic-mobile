@@ -84,7 +84,10 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const WelcomeScreen(),
-        '/login': (context) => const LoginScreen(),
+        '/login': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          return LoginScreen(prefilledEmail: args?['email']);
+        },
         '/register': (context) => const RegistrationScreen(),
         '/home': (context) => const HomeScreen(),
         '/admin-login': (context) => const AdminLoginScreen(),

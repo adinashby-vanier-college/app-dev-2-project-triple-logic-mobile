@@ -1,70 +1,94 @@
-import 'package:flutter/material.dart';
-// Comment out the shared_preferences import until it's available
-// import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../repositories/user_repository.dart';
+import 'package:postgres/postgres.dart';
 
-class SessionService {
-  static final SessionService _instance = SessionService._internal();
-  factory SessionService() => _instance;
-  SessionService._internal();
-
+class SessionService extends ChangeNotifier {
   User? _currentUser;
+  final SharedPreferences _prefs;
+  final UserRepository _userRepository;
+  
+  SessionService(this._prefs, PostgreSQLConnection connection) 
+    : _userRepository = UserRepository(connection);
 
-  Future<void> saveUserSession(User user) async {
-    // Using in-memory storage since shared_preferences is not available
-    _currentUser = user;
-    
-    // Implementation with shared_preferences (commented out)
-    // final prefs = await SharedPreferences.getInstance();
-    // final userJson = user.toMap();
-    // await prefs.setString(_userKey, jsonEncode(userJson));
-  }
+  User? get currentUser => _currentUser;
 
-  Future<void> clearUserSession() async {
-    // Using in-memory storage
-    _currentUser = null;
-    
-    // Implementation with shared_preferences (commented out)
-    // final prefs = await SharedPreferences.getInstance();
-    // await prefs.remove(_userKey);
-  }
+  bool get isLoggedIn => _currentUser != null;
 
-  Future<User?> getCurrentUser() async {
-    // If we have a user in memory, return it
-    if (_currentUser != null) {
-      return _currentUser;
-    }
-    
-    // Otherwise, fetch the admin user as a fallback
-    final userRepository = UserRepository();
-    return userRepository.getUserByEmail('admin@24bits.com');
-    
-    // Implementation with shared_preferences (commented out)
-    /*
-    final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString(_userKey);
-    
-    if (userJson == null) {
-      // If no user is logged in, return the admin user as default
-      final userRepository = UserRepository();
-      return userRepository.getUserByEmail('admin@24bits.com');
-    }
-    
+  Future<bool> login(String email, String password) async {
     try {
-      final userMap = jsonDecode(userJson) as Map<String, dynamic>;
-      return User.fromMap(userMap);
+      final user = await _userRepository.getUserByEmail(email);
+      
+      if (user != null) {
+        // In a real app, verify password hash here
+        _currentUser = user;
+        await _saveSession(user);
+        notifyListeners();
+        return true;
+      }
+      return false;
     } catch (e) {
-      print('Error parsing user session: $e');
-      // If there's an error parsing the session, return the admin user
-      final userRepository = UserRepository();
-      return userRepository.getUserByEmail('admin@24bits.com');
+      print('Login error: $e');
+      return false;
     }
-    */
   }
 
-  Future<bool> isLoggedIn() async {
-    final user = await getCurrentUser();
-    return user != null;
+  Future<bool> registerUser({
+    required String email,
+    required String password,
+    String? displayName,
+    String? photoUrl,
+    String? providerId,
+  }) async {
+    try {
+      final user = await _userRepository.createUser(
+        email: email,
+        password: password,
+        displayName: displayName,
+        photoUrl: photoUrl,
+        providerId: providerId,
+      );
+
+      if (user != null) {
+        _currentUser = user;
+        await _saveSession(user);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Registration error: $e');
+      return false;
+    }
+  }
+
+  Future<void> logout() async {
+    _currentUser = null;
+    await _clearSession();
+    notifyListeners();
+  }
+
+  Future<void> _saveSession(User user) async {
+    await _prefs.setString('user_email', user.email);
+    await _prefs.setInt('user_id', user.id);
+  }
+
+  Future<void> _clearSession() async {
+    await _prefs.remove('user_email');
+    await _prefs.remove('user_id');
+  }
+
+  Future<bool> restoreSession() async {
+    final userEmail = _prefs.getString('user_email');
+    if (userEmail != null) {
+      final user = await _userRepository.getUserByEmail(userEmail);
+      if (user != null) {
+        _currentUser = user;
+        notifyListeners();
+        return true;
+      }
+    }
+    return false;
   }
 } 
